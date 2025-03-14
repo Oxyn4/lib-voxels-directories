@@ -2,6 +2,9 @@
 name = "voxels-environment-rs"
 version = "0.1.0"
 edition = "2024"
+authors = ["Jacob Evans"]
+readme = "README.md"
+homepage = "oxynlabs.dev"
 
 [dependencies]
 mockall = "0.13.1"
