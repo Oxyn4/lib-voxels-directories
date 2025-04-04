@@ -20,6 +20,7 @@ use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
 use crate::application::{Application, ApplicationRDN};
+use crate::filesystem::FsInt;
 
 #[mockall::automock]
 pub trait ApplicationsDirectoryResolver {
@@ -73,23 +74,25 @@ pub trait ApplicationDirectoryResolver {
 }
 
 
-struct ApplicationDirectory<AppsDirResT: ApplicationsDirectoryResolver> {
+struct ApplicationDirectory<BaseT: ApplicationsDirectoryResolver, FsIntT: FsInt> {
     application_path: Option<PathBuf>,
     app: Option<Application>,
-    base: AppsDirResT,
+    base: BaseT,
+    fs: FsIntT,
 }
 
-impl<AppsDirResT: ApplicationsDirectoryResolver> ApplicationDirectory<AppsDirResT> {
-    fn new(base: AppsDirResT) -> Self {
+impl<AppsDirResT: ApplicationsDirectoryResolver, FsIntT: FsInt> ApplicationDirectory<AppsDirResT, FsIntT> {
+    fn new(base: AppsDirResT, fs: FsIntT) -> Self {
         Self {
             application_path: None,
             app: None,
-            base
+            base,
+            fs
         }
     }
 }
 
-impl<AppsDirResT: ApplicationsDirectoryResolver> ApplicationDirectoryResolver for ApplicationDirectory<AppsDirResT> {
+impl<AppsDirResT: ApplicationsDirectoryResolver, FsIntT: FsInt> ApplicationDirectoryResolver for ApplicationDirectory<AppsDirResT, FsIntT> {
     fn resolve(&self, application: &ApplicationRDN) -> Result<Application, VoxelsDirectoryError> {
         // if resolve has been called previously we update this objects path
         if self.is_resolved() {
@@ -98,7 +101,7 @@ impl<AppsDirResT: ApplicationsDirectoryResolver> ApplicationDirectoryResolver fo
 
         let base = self.base.resolve()?;
 
-        Ok(Application::from_file(base.join(String::from("voxels/applications/") + application.name() + "manifest.toml")))
+        Ok(Application::from_file(&self.fs, base.join(String::from("voxels/applications/") + application.name() + "manifest.toml")))
     }
 
     fn is_resolved(&self) -> bool {
@@ -106,7 +109,7 @@ impl<AppsDirResT: ApplicationsDirectoryResolver> ApplicationDirectoryResolver fo
     }
 }
 
-impl<BaseT: ApplicationsDirectoryResolver> Into<Option<PathBuf>> for ApplicationDirectory<BaseT> {
+impl<BaseT: ApplicationsDirectoryResolver, FsIntT: FsInt> Into<Option<PathBuf>> for ApplicationDirectory<BaseT, FsIntT> {
     fn into(self) -> Option<PathBuf> {
         self.application_path
     }

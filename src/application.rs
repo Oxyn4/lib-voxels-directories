@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use serde::{Serialize, Deserialize};
+use crate::filesystem::FsInt;
 
 #[derive(Debug, Copy, Clone, PartialEq, Ord, PartialOrd, Eq, Hash, Serialize, Deserialize)]
 pub enum ApplicationErrors {
@@ -71,8 +72,8 @@ impl Application {
         }
     }
 
-    pub fn from_file(path: PathBuf) -> Application {
-        let mut app: Application = toml::from_str(&std::fs::read_to_string(path.clone()).unwrap()).unwrap();
+    pub fn from_file(fs: impl FsInt, path: PathBuf) -> Application {
+        let mut app: Application = toml::from_str(&fs.read_to_string(path.clone().as_ref()).unwrap()).unwrap();
 
         app.rdn = ApplicationRDN::new(path.parent().unwrap().file_name().unwrap().to_str().unwrap().to_string()).unwrap();
 
