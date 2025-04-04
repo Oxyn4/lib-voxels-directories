@@ -14,8 +14,20 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-pub mod base;
-pub mod voxels;
-mod environment_variables;
-mod filesystem;
-mod application;
+use crate::base::BaseDirectoryError;
+
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+enum VoxelsDirectoryError {
+    NoCandidate
+}
+
+impl From<BaseDirectoryError> for VoxelsDirectoryError {
+    fn from(err: BaseDirectoryError) -> Self {
+        match err {
+            BaseDirectoryError::NoCandidate => VoxelsDirectoryError::NoCandidate
+        }
+    }
+}
+
+mod config;
+mod applications;

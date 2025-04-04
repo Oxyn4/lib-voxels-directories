@@ -15,6 +15,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 pub mod config;
+pub mod data;
+pub mod state;
+pub mod runtime;
 
 use super::environment_variables::{MockEnvInt, EnvInt};
 use super::filesystem::{MockFsInt, FsInt};

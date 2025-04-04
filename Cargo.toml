@@ -9,3 +9,6 @@ homepage = "oxynlabs.dev"
 [dependencies]
 mockall = "0.13.1"
 nix = "0.29.0"
+serde = { version = "1.0.219", features = ["derive"] }
+toml = "0.8.20"
+url = "2.5.4"

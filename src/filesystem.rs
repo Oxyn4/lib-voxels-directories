@@ -23,6 +23,7 @@ use mockall::automock;
 pub trait FsInt {
     fn exists(&self, path: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;
+    fn is_absolute(&self, path: &Path) -> bool;
 }
 
 #[derive(Clone, Default)]
@@ -35,6 +36,10 @@ impl FsInt for DefaultFsInt {
 
     fn is_directory(&self, path: &Path) -> bool {
         std::fs::metadata(path).unwrap().is_dir()
+    }
+
+    fn is_absolute(&self, path: &Path) -> bool {
+        path.is_absolute()
     }
 }
 

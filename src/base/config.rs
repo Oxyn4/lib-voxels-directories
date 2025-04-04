@@ -78,7 +78,7 @@ fn test_default_config_verifier() {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-enum ConfigDirectoryResolutionMethods {
+pub enum ConfigDirectoryResolutionMethods {
     FromXDG,
     FromFHS,
     FromVoxels
@@ -91,9 +91,9 @@ struct ConfigDirectoryPriority {
 impl Default for ConfigDirectoryPriority {
     fn default() -> Self {
         let mut order = std::collections::BTreeMap::new();
-        order.insert(0, ConfigDirectoryResolutionMethods::FromVoxels);
-        order.insert(1, ConfigDirectoryResolutionMethods::FromXDG);
-        order.insert(2, ConfigDirectoryResolutionMethods::FromFHS);
+        order.insert(0, FromVoxels);
+        order.insert(1, FromXDG);
+        order.insert(2, FromFHS);
         Self {
             order
         }
@@ -147,7 +147,7 @@ impl<EnvIntT: EnvInt, VerifierT: ConfigVerifier> ConfigDirectoryResolver for Con
     fn using_fhs(&self) -> Result<PathBuf, BaseDirectoryError> {
         let path: PathBuf = self.env.get_path_from_environment(String::from("HOME")).unwrap();
 
-        let config_path = path.join(".config/voxels/");
+        let config_path = path.join(".config/");
 
         if self.verifier.verify(&config_path) {
             Ok(config_path)
@@ -157,9 +157,7 @@ impl<EnvIntT: EnvInt, VerifierT: ConfigVerifier> ConfigDirectoryResolver for Con
     }
 
     fn using_xdg(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let path: PathBuf = self.env.get_path_from_environment(String::from("XDG_CONFIG_HOME")).unwrap();
-
-        let config_path = path.join("voxels/");
+        let config_path: PathBuf = self.env.get_path_from_environment(String::from("XDG_CONFIG_HOME")).unwrap();
 
         if self.verifier.verify(&config_path) {
             Ok(config_path)
@@ -228,7 +226,7 @@ fn test_from_fhs() {
 
     let home_env = PathBuf::from("/home");
 
-    let expected_home_path = PathBuf::from("/home/.config/voxels/");
+    let expected_home_path = PathBuf::from("/home/.config/");
 
 
     env.expect_get_path_from_environment()
@@ -260,9 +258,9 @@ fn test_resolve() {
 
     // first test setup conditions for voxels environment variable
     // value of VOXELS_CONFIG_HOME environment variable
-    let voxels_config_home = PathBuf::from("/home/voxels");
+    let voxels_config_home = PathBuf::from("/home");
 
-    let expected_voxels_return = PathBuf::from("/home/voxels");
+    let expected_voxels_return = PathBuf::from("/home");
 
     env.expect_and_rig("VOXELS_CONFIG_HOME", voxels_config_home.clone());
 
@@ -286,7 +284,7 @@ fn test_from_xdg() {
 
     let xdg_home = PathBuf::from("/home");
 
-    let expected_home_path = PathBuf::from("/home/voxels/");
+    let expected_home_path = PathBuf::from("/home");
 
     env.expect_and_rig("XDG_CONFIG_HOME", xdg_home.clone());
 
