@@ -75,7 +75,7 @@ pub trait ApplicationDirectoryResolver {
 
 
 struct ApplicationDirectory<BaseT: ApplicationsDirectoryResolver, FsIntT: FsInt> {
-    application_path: Option<PathBuf>,
+    path: Option<PathBuf>,
     app: Option<Application>,
     base: BaseT,
     fs: FsIntT,
@@ -84,7 +84,7 @@ struct ApplicationDirectory<BaseT: ApplicationsDirectoryResolver, FsIntT: FsInt>
 impl<AppsDirResT: ApplicationsDirectoryResolver, FsIntT: FsInt> ApplicationDirectory<AppsDirResT, FsIntT> {
     fn new(base: AppsDirResT, fs: FsIntT) -> Self {
         Self {
-            application_path: None,
+            path: None,
             app: None,
             base,
             fs
@@ -105,12 +105,18 @@ impl<AppsDirResT: ApplicationsDirectoryResolver, FsIntT: FsInt> ApplicationDirec
     }
 
     fn is_resolved(&self) -> bool {
-        self.application_path.is_some()
+        self.path.is_some()
     }
 }
 
 impl<BaseT: ApplicationsDirectoryResolver, FsIntT: FsInt> Into<Option<PathBuf>> for ApplicationDirectory<BaseT, FsIntT> {
     fn into(self) -> Option<PathBuf> {
-        self.application_path
+        self.path
+    }
+}
+
+impl<BaseT: ApplicationsDirectoryResolver, FsIntT: FsInt> Into<Option<Application>> for ApplicationDirectory<BaseT, FsIntT> {
+    fn into(self) -> Option<Application> {
+        self.app
     }
 }
