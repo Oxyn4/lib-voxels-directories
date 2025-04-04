@@ -24,6 +24,7 @@ pub trait FsInt {
     fn exists(&self, path: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;
     fn is_absolute(&self, path: &Path) -> bool;
+    fn read_to_string(&self, path: &Path) -> std::io::Result<String>;
 }
 
 #[derive(Clone, Default)]
@@ -40,6 +41,10 @@ impl FsInt for DefaultFsInt {
 
     fn is_absolute(&self, path: &Path) -> bool {
         path.is_absolute()
+    }
+
+    fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
+        std::fs::read_to_string(path)
     }
 }
 
