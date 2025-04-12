@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 pub mod voxels;
-pub mod application;
 pub mod environment_variables;
 pub mod filesystem;
+
+use lib_voxels_application;
