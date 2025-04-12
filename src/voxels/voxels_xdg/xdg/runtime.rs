@@ -16,17 +16,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 use std::path::{Path, PathBuf};
-use crate::base::BaseDirectoryError;
+use crate::voxels::voxels_xdg::xdg::BaseDirectoryError;
 use crate::environment_variables::EnvInt;
 use crate::filesystem::FsInt;
 
 #[mockall::automock]
-trait RuntimeVerifier {
+pub trait RuntimeVerifier {
     fn verify(&self, path: &Path) -> bool;
 }
 
 #[derive(Default)]
-struct DefaultRuntimeVerifier<FsIntT: FsInt> {
+pub struct DefaultRuntimeVerifier<FsIntT: FsInt> {
     fs: FsIntT,
 }
 
@@ -50,7 +50,7 @@ impl<FsIntT: FsInt> RuntimeVerifier for DefaultRuntimeVerifier<FsIntT> {
 }
 
 impl<FsIntT: FsInt> DefaultRuntimeVerifier<FsIntT> {
-    fn new(fs: FsIntT) -> Self {
+    pub fn new(fs: FsIntT) -> Self {
         Self {
             fs
         }
@@ -59,12 +59,12 @@ impl<FsIntT: FsInt> DefaultRuntimeVerifier<FsIntT> {
 
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
-enum RuntimeDirectoryResolutionMethods {
+pub enum RuntimeDirectoryResolutionMethods {
     FromXDG,
     FromVoxels
 }
 
-struct RuntimeDirectoryPriority {
+pub struct RuntimeDirectoryPriority {
     order: std::collections::BTreeMap<usize, RuntimeDirectoryResolutionMethods>,
 }
 
@@ -121,7 +121,7 @@ impl<EnvIntT: EnvInt, VerifierT: RuntimeVerifier> RuntimeDirectory<EnvIntT, Veri
 
 impl<EnvIntT: EnvInt, VerifierT: RuntimeVerifier> RuntimeDirectoryResolver for RuntimeDirectory<EnvIntT, VerifierT> {
     fn using_xdg(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let data_path: PathBuf = self.env.get_path_from_environment(String::from("XDG_RUNTIME_DIR")).unwrap();
+        let data_path: PathBuf = self.env.get_path_from_environment(String::from("XDG_RUNTIME_DIR"))?;
 
         if self.verifier.verify(&data_path) {
             Ok(data_path)
@@ -131,7 +131,7 @@ impl<EnvIntT: EnvInt, VerifierT: RuntimeVerifier> RuntimeDirectoryResolver for R
     }
 
     fn using_voxels(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let path: PathBuf = self.env.get_path_from_environment(String::from("VOXELS_RUNTIME_HOME")).unwrap();
+        let path: PathBuf = self.env.get_path_from_environment(String::from("VOXELS_RUNTIME_HOME"))?;
 
         if self.verifier.verify(&path) {
             Ok(path)
@@ -142,28 +142,24 @@ impl<EnvIntT: EnvInt, VerifierT: RuntimeVerifier> RuntimeDirectoryResolver for R
 
     fn resolve(&self) -> Result<(PathBuf, RuntimeDirectoryResolutionMethods), BaseDirectoryError> {
         for index in 0..self.priority.order.len() {
-            return match self.priority.order[&index] {
+            match self.priority.order[&index] {
                 RuntimeDirectoryResolutionMethods::FromXDG => {
                     let path = self.using_xdg();
 
                     if path.is_ok() {
-                        Ok((path?, RuntimeDirectoryResolutionMethods::FromXDG))
-                    } else {
-                        Err(BaseDirectoryError::NoCandidate)
+                        return Ok((path?, RuntimeDirectoryResolutionMethods::FromXDG));
                     }
                 },
                 RuntimeDirectoryResolutionMethods::FromVoxels => {
                     let path = self.using_voxels();
 
                     if path.is_ok() {
-                        Ok((path?, RuntimeDirectoryResolutionMethods::FromVoxels))
-                    } else {
-                        Err(BaseDirectoryError::NoCandidate)
+                        return Ok((path?, RuntimeDirectoryResolutionMethods::FromVoxels));
                     }
                 }
             }
         }
-        unreachable!()
+        Err(BaseDirectoryError::NoCandidate)
     }
 }
 

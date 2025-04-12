@@ -17,17 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::BaseDirectoryError;
 use std::path::{Path, PathBuf};
-use crate::base::config::ConfigDirectoryResolutionMethods::{FromFHS, FromVoxels, FromXDG};
+use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods::{FromFHS, FromVoxels, FromXDG};
 use super::{FsInt, MockFsInt};
 use super::{EnvInt, MockEnvInt};
 
 #[mockall::automock]
-trait ConfigVerifier {
+pub trait ConfigVerifier {
     fn verify(&self, path: &Path) -> bool;
 }
 
 #[derive(Default)]
-struct DefaultConfigVerifier<FsIntT: FsInt> {
+pub struct DefaultConfigVerifier<FsIntT: FsInt> {
     fs: FsIntT,
 }
 
@@ -46,7 +46,7 @@ impl<FsIntT: FsInt> ConfigVerifier for DefaultConfigVerifier<FsIntT> {
 }
 
 impl<FsIntT: FsInt> DefaultConfigVerifier<FsIntT> {
-    fn new(fs: FsIntT) -> Self {
+    pub fn new(fs: FsIntT) -> Self {
         Self {
             fs
         }
@@ -84,7 +84,7 @@ pub enum ConfigDirectoryResolutionMethods {
     FromVoxels
 }
 
-struct ConfigDirectoryPriority {
+pub struct ConfigDirectoryPriority {
     order: std::collections::BTreeMap<usize, ConfigDirectoryResolutionMethods>,
 }
 
@@ -101,14 +101,14 @@ impl Default for ConfigDirectoryPriority {
 }
 
 impl ConfigDirectoryPriority {
-    fn set_all(&mut self, new_order: [ConfigDirectoryResolutionMethods; 3]) {
+    pub fn set_all(&mut self, new_order: [ConfigDirectoryResolutionMethods; 3]) {
         self.order = std::collections::BTreeMap::new();
         self.order.insert(0, new_order[0].clone());
         self.order.insert(1, new_order[1].clone());
         self.order.insert(2, new_order[2].clone());
     }
 
-    fn get(&self) -> std::collections::BTreeMap<usize, ConfigDirectoryResolutionMethods> {
+    pub fn get(&self) -> std::collections::BTreeMap<usize, ConfigDirectoryResolutionMethods> {
         self.order.clone()
     }
 }
@@ -145,7 +145,7 @@ impl<EnvIntT: EnvInt, VerifierT: ConfigVerifier> ConfigDirectory<EnvIntT, Verifi
 
 impl<EnvIntT: EnvInt, VerifierT: ConfigVerifier> ConfigDirectoryResolver for ConfigDirectory<EnvIntT, VerifierT> {
     fn using_fhs(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let path: PathBuf = self.env.get_path_from_environment(String::from("HOME")).unwrap();
+        let path: PathBuf = self.env.get_path_from_environment(String::from("HOME"))?;
 
         let config_path = path.join(".config/");
 
@@ -157,7 +157,7 @@ impl<EnvIntT: EnvInt, VerifierT: ConfigVerifier> ConfigDirectoryResolver for Con
     }
 
     fn using_xdg(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let config_path: PathBuf = self.env.get_path_from_environment(String::from("XDG_CONFIG_HOME")).unwrap();
+        let config_path: PathBuf = self.env.get_path_from_environment(String::from("XDG_CONFIG_HOME"))?;
 
         if self.verifier.verify(&config_path) {
             Ok(config_path)
@@ -167,7 +167,7 @@ impl<EnvIntT: EnvInt, VerifierT: ConfigVerifier> ConfigDirectoryResolver for Con
     }
 
     fn using_voxels(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let path: PathBuf = self.env.get_path_from_environment(String::from("VOXELS_CONFIG_HOME")).unwrap();
+        let path: PathBuf = self.env.get_path_from_environment(String::from("VOXELS_CONFIG_HOME"))?;
 
         if self.verifier.verify(&path) {
             Ok(path)
@@ -178,37 +178,31 @@ impl<EnvIntT: EnvInt, VerifierT: ConfigVerifier> ConfigDirectoryResolver for Con
 
     fn resolve(&self) -> Result<(PathBuf, ConfigDirectoryResolutionMethods), BaseDirectoryError> {
         for index in 0..self.priority.order.len() {
-            return match self.priority.order[&index] {
+            match self.priority.order[&index] {
                 FromXDG => {
                     let path = self.using_xdg();
 
                     if path.is_ok() {
-                        Ok((path?, FromXDG))
-                    } else {
-                        Err(BaseDirectoryError::NoCandidate)
+                        return Ok((path?, FromXDG));
                     }
                 },
                 FromVoxels => {
                     let path = self.using_voxels();
 
                     if path.is_ok() {
-                        Ok((path?, FromVoxels))
-                    } else {
-                        Err(BaseDirectoryError::NoCandidate)
+                        return Ok((path?, FromVoxels));
                     }
                 },
                 FromFHS => {
                     let path = self.using_fhs();
 
                     if path.is_ok() {
-                        Ok((path?, FromFHS))
-                    } else {
-                        Err(BaseDirectoryError::NoCandidate)
+                        return Ok((path?, FromFHS));
                     }
                 }
             }
         }
-        unreachable!()
+        Err(BaseDirectoryError::NoCandidate)
     }
 }
 

@@ -1,14 +1,16 @@
 [package]
-name = "voxels-environment-rs"
+name = "lib-voxels-application"
 version = "0.1.0"
 edition = "2024"
 authors = ["Jacob Evans"]
-readme = "README.md"
+description = "Rust language constructs for representing and locating shared directories used by applications in the voxels game ecosystem."
+readme = "../README.md"
 homepage = "oxynlabs.dev"
 
 [dependencies]
+lib-voxels-application = {path="../lib-voxels-application"}
 mockall = "0.13.1"
 nix = "0.29.0"
 serde = { version = "1.0.219", features = ["derive"] }
 toml = "0.8.20"
-url = "2.5.4"
+url = { version = "2.5.4", features = ["serde"]}

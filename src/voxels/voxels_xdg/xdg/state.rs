@@ -14,23 +14,24 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
 use std::path::{Path, PathBuf};
-use crate::base::BaseDirectoryError;
 use crate::environment_variables::EnvInt;
 use crate::filesystem::FsInt;
+use super::BaseDirectoryError;
 
 #[mockall::automock]
-trait DataVerifier {
+pub trait StateVerifier {
     fn verify(&self, path: &Path) -> bool;
 }
 
 #[derive(Default)]
-struct DefaultDataVerifier<FsIntT: FsInt> {
+pub struct DefaultStateVerifier<FsIntT: FsInt> {
     fs: FsIntT,
 }
 
 
-impl<FsIntT: FsInt> DataVerifier for DefaultDataVerifier<FsIntT> {
+impl<FsIntT: FsInt> StateVerifier for DefaultStateVerifier<FsIntT> {
     fn verify(&self, path: &Path) -> bool {
         if !self.fs.exists(path) {
             return false;
@@ -48,8 +49,8 @@ impl<FsIntT: FsInt> DataVerifier for DefaultDataVerifier<FsIntT> {
     }
 }
 
-impl<FsIntT: FsInt> DefaultDataVerifier<FsIntT> {
-    fn new(fs: FsIntT) -> Self {
+impl<FsIntT: FsInt> DefaultStateVerifier<FsIntT> {
+    pub fn new(fs: FsIntT) -> Self {
         Self {
             fs
         }
@@ -58,62 +59,62 @@ impl<FsIntT: FsInt> DefaultDataVerifier<FsIntT> {
 
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub enum DataDirectoryResolutionMethods {
+pub enum StateDirectoryResolutionMethods {
     FromXDG,
     FromFHS,
     FromVoxels
 }
 
-struct DataDirectoryPriority {
-    order: std::collections::BTreeMap<usize, DataDirectoryResolutionMethods>,
+struct StateDirectoryPriority {
+    order: std::collections::BTreeMap<usize, StateDirectoryResolutionMethods>,
 }
 
-impl Default for DataDirectoryPriority {
+impl Default for StateDirectoryPriority {
     fn default() -> Self {
         let mut order = std::collections::BTreeMap::new();
-        order.insert(0, DataDirectoryResolutionMethods::FromVoxels);
-        order.insert(1, DataDirectoryResolutionMethods::FromXDG);
-        order.insert(2, DataDirectoryResolutionMethods::FromFHS);
+        order.insert(0, StateDirectoryResolutionMethods::FromVoxels);
+        order.insert(1, StateDirectoryResolutionMethods::FromXDG);
+        order.insert(2, StateDirectoryResolutionMethods::FromFHS);
         Self {
             order
         }
     }
 }
 
-impl DataDirectoryPriority {
-    fn set_all(&mut self, new_order: [DataDirectoryResolutionMethods; 3]) {
+impl StateDirectoryPriority {
+    fn set_all(&mut self, new_order: [StateDirectoryResolutionMethods; 3]) {
         self.order = std::collections::BTreeMap::new();
         self.order.insert(0, new_order[0].clone());
         self.order.insert(1, new_order[1].clone());
         self.order.insert(2, new_order[2].clone());
     }
 
-    fn get(&self) -> std::collections::BTreeMap<usize, DataDirectoryResolutionMethods> {
+    fn get(&self) -> std::collections::BTreeMap<usize, StateDirectoryResolutionMethods> {
         self.order.clone()
     }
 }
 
 #[mockall::automock]
-pub trait DataDirectoryResolver {
+pub trait StateDirectoryResolver {
     fn using_fhs(&self) -> Result<PathBuf, BaseDirectoryError>;
     fn using_xdg(&self) -> Result<PathBuf, BaseDirectoryError>;
     fn using_voxels(&self) -> Result<PathBuf, BaseDirectoryError>;
-    fn resolve(&self) -> Result<(PathBuf, DataDirectoryResolutionMethods), BaseDirectoryError>;
+    fn resolve(&self) -> Result<(PathBuf, StateDirectoryResolutionMethods), BaseDirectoryError>;
 }
 
 #[derive(Default)]
-pub struct DataDirectory<EnvIntT: EnvInt, VerifierT: DataVerifier> {
-    data_path: Option<PathBuf>,
+pub struct StateDirectory<EnvIntT: EnvInt, VerifierT: StateVerifier> {
+    state_path: Option<PathBuf>,
     verifier: VerifierT,
     env: EnvIntT,
-    pub priority: DataDirectoryPriority,
+    pub priority: StateDirectoryPriority,
 }
 
-impl<EnvIntT: EnvInt, VerifierT: DataVerifier> DataDirectory<EnvIntT, VerifierT> {
+impl<EnvIntT: EnvInt, VerifierT: StateVerifier> StateDirectory<EnvIntT, VerifierT> {
     pub fn new(env: EnvIntT, verifier: VerifierT) -> Self {
-        let priority = DataDirectoryPriority::default();
+        let priority = StateDirectoryPriority::default();
         Self {
-            data_path: None,
+            state_path: None,
             env,
             verifier,
             priority
@@ -121,31 +122,31 @@ impl<EnvIntT: EnvInt, VerifierT: DataVerifier> DataDirectory<EnvIntT, VerifierT>
     }
 }
 
-impl<EnvIntT: EnvInt, VerifierT: DataVerifier> DataDirectoryResolver for DataDirectory<EnvIntT, VerifierT> {
+impl<EnvIntT: EnvInt, VerifierT: StateVerifier> StateDirectoryResolver for StateDirectory<EnvIntT, VerifierT> {
     fn using_fhs(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let path: PathBuf = self.env.get_path_from_environment(String::from("HOME")).unwrap();
+        let path: PathBuf = self.env.get_path_from_environment(String::from("HOME"))?;
 
-        let data_path = path.join(".local/share/");
+        let state_path = path.join(".local/state/");
 
-        if self.verifier.verify(&data_path) {
-            Ok(data_path)
+        if self.verifier.verify(&state_path) {
+            Ok(state_path)
         } else {
             Err(BaseDirectoryError::NoCandidate)
         }
     }
 
     fn using_xdg(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let data_path: PathBuf = self.env.get_path_from_environment(String::from("XDG_DATA_HOME")).unwrap();
+        let state_path: PathBuf = self.env.get_path_from_environment(String::from("XDG_STATE_HOME"))?;
 
-        if self.verifier.verify(&data_path) {
-            Ok(data_path)
+        if self.verifier.verify(&state_path) {
+            Ok(state_path)
         } else {
             Err(BaseDirectoryError::NoCandidate)
         }
     }
 
     fn using_voxels(&self) -> Result<PathBuf, BaseDirectoryError> {
-        let path: PathBuf = self.env.get_path_from_environment(String::from("VOXELS_DATA_HOME")).unwrap();
+        let path: PathBuf = self.env.get_path_from_environment(String::from("VOXELS_STATE_HOME"))?;
 
         if self.verifier.verify(&path) {
             Ok(path)
@@ -154,44 +155,38 @@ impl<EnvIntT: EnvInt, VerifierT: DataVerifier> DataDirectoryResolver for DataDir
         }
     }
 
-    fn resolve(&self) -> Result<(PathBuf, DataDirectoryResolutionMethods), BaseDirectoryError> {
+    fn resolve(&self) -> Result<(PathBuf, StateDirectoryResolutionMethods), BaseDirectoryError> {
         for index in 0..self.priority.order.len() {
-            return match self.priority.order[&index] {
-                DataDirectoryResolutionMethods::FromXDG => {
+            match self.priority.order[&index] {
+                StateDirectoryResolutionMethods::FromXDG => {
                     let path = self.using_xdg();
 
                     if path.is_ok() {
-                        Ok((path?, DataDirectoryResolutionMethods::FromXDG))
-                    } else {
-                        Err(BaseDirectoryError::NoCandidate)
+                        return Ok((path?, StateDirectoryResolutionMethods::FromXDG));
                     }
                 },
-                DataDirectoryResolutionMethods::FromVoxels => {
+                StateDirectoryResolutionMethods::FromVoxels => {
                     let path = self.using_voxels();
 
                     if path.is_ok() {
-                        Ok((path?, DataDirectoryResolutionMethods::FromVoxels))
-                    } else {
-                        Err(BaseDirectoryError::NoCandidate)
+                        return Ok((path?, StateDirectoryResolutionMethods::FromVoxels));
                     }
                 },
-                DataDirectoryResolutionMethods::FromFHS => {
+                StateDirectoryResolutionMethods::FromFHS => {
                     let path = self.using_fhs();
 
                     if path.is_ok() {
-                        Ok((path?, DataDirectoryResolutionMethods::FromFHS))
-                    } else {
-                        Err(BaseDirectoryError::NoCandidate)
+                        return Ok((path?, StateDirectoryResolutionMethods::FromFHS));
                     }
                 }
             }
         }
-        unreachable!()
+        Err(BaseDirectoryError::NoCandidate)
     }
 }
 
-impl<EnvIntT: EnvInt, VerifierT: DataVerifier> Into<PathBuf> for DataDirectory<EnvIntT, VerifierT> {
+impl<EnvIntT: EnvInt, VerifierT: StateVerifier> Into<PathBuf> for StateDirectory<EnvIntT, VerifierT> {
     fn into(self) -> PathBuf {
-        self.data_path.unwrap()
+        self.state_path.unwrap()
     }
 }

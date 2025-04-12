@@ -19,11 +19,17 @@ pub mod data;
 pub mod state;
 pub mod runtime;
 
-use super::environment_variables::{MockEnvInt, EnvInt};
-use super::filesystem::{MockFsInt, FsInt};
+use crate::environment_variables::{MockEnvInt, EnvInt};
+use crate::filesystem::{MockFsInt, FsInt};
 
 #[derive(Debug)]
 pub enum BaseDirectoryError {
     NoCandidate
+}
+
+impl From<std::env::VarError> for BaseDirectoryError {
+    fn from(_: std::env::VarError) -> Self {
+        BaseDirectoryError::NoCandidate
+    }
 }
 
