@@ -28,5 +28,4 @@ impl From<BaseDirectoryError> for VoxelsDirectoryError {
         }
     }
 }
-pub mod applications;
 pub mod voxels_xdg;
