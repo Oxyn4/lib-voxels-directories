@@ -18,4 +18,4 @@ pub mod voxels;
 pub mod environment_variables;
 pub mod filesystem;
 
-use lib_voxels_application;
+pub use lib_voxels_application;
