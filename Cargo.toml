@@ -8,7 +8,7 @@ readme = "../README.md"
 homepage = "oxynlabs.dev"
 
 [dependencies]
-lib-voxels-application = {path="../lib-voxels-application"}
+lib-voxels-application = {git="https://github.com/Oxyn4/lib-voxels-application"}
 mockall = "0.13.1"
 nix = "0.29.0"
 serde = { version = "1.0.219", features = ["derive"] }
