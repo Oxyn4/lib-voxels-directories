@@ -1,5 +1,5 @@
 [package]
-name = "lib-voxels-application"
+name = "lib-voxels-directories"
 version = "0.1.0"
 edition = "2024"
 authors = ["Jacob Evans"]
