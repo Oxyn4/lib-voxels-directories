@@ -19,6 +19,7 @@ use crate::voxels::voxels_xdg::xdg::{state as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use crate::voxels::voxels_xdg::runtime::{RuntimeDirectoryPriority, RuntimeDirectoryResolutionMethods};
 use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -28,7 +29,30 @@ pub enum StateDirectoryResolutionMethods {
 }
 
 pub struct StateDirectoryPriority {
-    order: std::collections::BTreeMap<usize, ConfigDirectoryResolutionMethods>,
+    order: std::collections::BTreeMap<usize, StateDirectoryResolutionMethods>,
+}
+
+impl Default for StateDirectoryPriority {
+    fn default() -> Self {
+        let mut order = std::collections::BTreeMap::new();
+        order.insert(0, StateDirectoryResolutionMethods::FromDBus);
+        order.insert(1, StateDirectoryResolutionMethods::FromXDG);
+        Self {
+            order
+        }
+    }
+}
+
+impl StateDirectoryPriority {
+    pub fn set_all(&mut self, new_order: [StateDirectoryResolutionMethods; 2]) {
+        self.order = std::collections::BTreeMap::new();
+        self.order.insert(0, new_order[0].clone());
+        self.order.insert(1, new_order[1].clone());
+    }
+
+    pub fn get(&self) -> std::collections::BTreeMap<usize, StateDirectoryResolutionMethods> {
+        self.order.clone()
+    }
 }
 
 #[mockall::automock]
@@ -40,6 +64,7 @@ pub trait StateDirectoryResolver {
 
 pub struct StateDirectory<BaseT: base::StateDirectoryResolver> {
     path: Option<PathBuf>,
+    pub priority: RuntimeDirectoryPriority,
     base: BaseT,
 }
 
@@ -47,6 +72,7 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectory<BaseT> {
     pub fn new(base: BaseT) -> Self {
         Self {
             path: None,
+            priority: Default::default(),
             base
         }
     }
