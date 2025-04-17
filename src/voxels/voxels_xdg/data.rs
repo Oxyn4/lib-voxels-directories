@@ -19,6 +19,7 @@ use crate::voxels::voxels_xdg::xdg::{data as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use crate::voxels::voxels_xdg::runtime::{RuntimeDirectoryPriority, RuntimeDirectoryResolutionMethods};
 use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -28,7 +29,30 @@ pub enum DataDirectoryResolutionMethods {
 }
 
 pub struct DataDirectoryPriority {
-    order: std::collections::BTreeMap<usize, ConfigDirectoryResolutionMethods>,
+    order: std::collections::BTreeMap<usize, DataDirectoryResolutionMethods>,
+}
+
+impl Default for DataDirectoryPriority {
+    fn default() -> Self {
+        let mut order = std::collections::BTreeMap::new();
+        order.insert(0, DataDirectoryResolutionMethods::FromDBus);
+        order.insert(1, DataDirectoryResolutionMethods::FromXDG);
+        Self {
+            order
+        }
+    }
+}
+
+impl DataDirectoryPriority {
+    pub fn set_all(&mut self, new_order: [DataDirectoryResolutionMethods; 2]) {
+        self.order = std::collections::BTreeMap::new();
+        self.order.insert(0, new_order[0].clone());
+        self.order.insert(1, new_order[1].clone());
+    }
+
+    pub fn get(&self) -> std::collections::BTreeMap<usize, DataDirectoryResolutionMethods> {
+        self.order.clone()
+    }
 }
 
 #[mockall::automock]
@@ -40,13 +64,16 @@ pub trait DataDirectoryResolver {
 
 pub struct DataDirectory<BaseT: base::DataDirectoryResolver> {
     data_path: Option<PathBuf>,
+    pub priority: RuntimeDirectoryPriority,
     base: BaseT,
 }
 
 impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
     pub fn new(base: BaseT) -> Self {
+        let priority = RuntimeDirectoryPriority::default();
         Self {
             data_path: None,
+            priority,
             base
         }
     }
