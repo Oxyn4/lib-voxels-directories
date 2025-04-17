@@ -20,6 +20,12 @@ use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
 
+#[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum ConfigDirectoryResolutionMethods {
+    FromXDG,
+    FromDBus,
+}
+
 #[mockall::automock]
 pub trait ConfigDirectoryResolver {
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
