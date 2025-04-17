@@ -26,6 +26,10 @@ pub enum ConfigDirectoryResolutionMethods {
     FromDBus,
 }
 
+pub struct ConfigDirectoryPriority {
+    order: std::collections::BTreeMap<usize, crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods>,
+}
+
 #[mockall::automock]
 pub trait ConfigDirectoryResolver {
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;

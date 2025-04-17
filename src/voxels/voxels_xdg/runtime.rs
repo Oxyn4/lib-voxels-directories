@@ -19,11 +19,16 @@ use crate::voxels::voxels_xdg::xdg::{runtime as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum RuntimeDirectoryResolutionMethods {
     FromXDG,
     FromDBus,
+}
+
+pub struct RuntimeDirectoryPriority {
+    order: std::collections::BTreeMap<usize, ConfigDirectoryResolutionMethods>,
 }
 
 #[mockall::automock]
