@@ -84,13 +84,14 @@ pub trait RuntimeDirectoryResolver {
     fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn is_resolved(&self) -> bool;
 }
 
 pub struct RuntimeDirectory<BaseT: base::RuntimeDirectoryResolver> {
-    data_path: Option<PathBuf>,
+    path: Option<PathBuf>,
     pub priority: RuntimeDirectoryPriority,
     base: BaseT,
 }
@@ -99,7 +100,7 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectory<BaseT> {
     pub fn new(base: BaseT) -> Self {
         let priority = RuntimeDirectoryPriority::default();
         Self {
-            data_path: None,
+            path: None,
             priority,
             base
         }
@@ -117,7 +118,14 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
     fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving runtime directory from DBus");
 
-        todo!()
+        // if resolve has been called previously we update this objects path
+        if self.is_resolved() {
+            return Ok(self.path.clone().unwrap());
+        }
+
+        let (base, _how) = self.base.resolve()?;
+
+        Ok(base.join("voxels"))
     }
 
     #[cfg(feature = "dbus")]
@@ -156,12 +164,12 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
     }
 
     fn is_resolved(&self) -> bool {
-        self.data_path.is_some()
+        self.path.is_some()
     }
 }
 
 impl<BaseT: base::RuntimeDirectoryResolver> Into<Option<PathBuf>> for RuntimeDirectory<BaseT> {
     fn into(self) -> Option<PathBuf> {
-        self.data_path
+        self.path
     }
 }

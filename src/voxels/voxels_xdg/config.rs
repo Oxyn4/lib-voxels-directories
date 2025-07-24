@@ -89,7 +89,7 @@ pub trait ConfigDirectoryResolver {
 }
 
 pub struct ConfigDirectory<BaseT: base::ConfigDirectoryResolver> {
-    config_path: Option<PathBuf>,
+    path: Option<PathBuf>,
     pub priority: ConfigDirectoryPriority,
     base: BaseT,
 }
@@ -99,7 +99,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectory<BaseT> {
         let priority = ConfigDirectoryPriority::default();
 
         Self {
-            config_path: None,
+            path: None,
             priority,
             base
         }
@@ -119,7 +119,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
 
         // if resolve has been called previously we update this objects path
         if self.is_resolved() {
-            return Ok(self.config_path.clone().unwrap());
+            return Ok(self.path.clone().unwrap());
         }
 
         let (base, _how) = self.base.resolve()?;
@@ -163,12 +163,12 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
     }
 
     fn is_resolved(&self) -> bool {
-        self.config_path.is_some()
+        self.path.is_some()
     }
 }
 
 impl<BaseT: base::ConfigDirectoryResolver> Into<Option<PathBuf>> for ConfigDirectory<BaseT> {
     fn into(self) -> Option<PathBuf> {
-        self.config_path
+        self.path
     }
 }

@@ -92,7 +92,7 @@ pub trait DataDirectoryResolver {
 }
 
 pub struct DataDirectory<BaseT: base::DataDirectoryResolver> {
-    data_path: Option<PathBuf>,
+    path: Option<PathBuf>,
     pub priority: DataDirectoryPriority,
     base: BaseT,
 }
@@ -101,7 +101,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
     pub fn new(base: BaseT) -> Self {
         let priority = DataDirectoryPriority::default();
         Self {
-            data_path: None,
+            path: None,
             priority,
             base
         }
@@ -119,7 +119,14 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
     fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving data directory from DBus");
 
-        todo!()
+        // if resolve has been called previously we update this objects path
+        if self.is_resolved() {
+            return Ok(self.path.clone().unwrap());
+        }
+
+        let (base, _how) = self.base.resolve()?;
+
+        Ok(base.join("voxels"))
     }
 
     #[cfg(feature = "dbus")]
@@ -158,12 +165,12 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
     }
 
     fn is_resolved(&self) -> bool {
-        self.data_path.is_some()
+        self.path.is_some()
     }
 }
 
 impl<BaseT: base::DataDirectoryResolver> Into<Option<PathBuf>> for DataDirectory<BaseT> {
     fn into(self) -> Option<PathBuf> {
-        self.data_path
+        self.path
     }
 }
