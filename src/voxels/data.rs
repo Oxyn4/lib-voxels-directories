@@ -49,7 +49,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
 
         let base = self.base.resolve()?;
 
-        Ok(base.join("voxels"))
+        Ok(base.join(application.rdn().as_path()))
     }
 
     async fn resolve_and_create(&self, application: Application) -> Result<PathBuf, VoxelsDirectoryError> {
