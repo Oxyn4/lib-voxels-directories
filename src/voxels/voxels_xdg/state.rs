@@ -19,6 +19,7 @@ use crate::voxels::voxels_xdg::xdg::{state as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use tracing::trace;
 use crate::voxels::voxels_xdg::runtime::{RuntimeDirectoryPriority, RuntimeDirectoryResolutionMethods};
 use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 
@@ -105,10 +106,14 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectory<BaseT> {
 impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirectory<BaseT> {
     #[cfg(feature = "dbus")]
     fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        trace!("Resolving state directory from DBus");
+
         todo!()
     }
 
     fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        trace!("Resolving state directory from DBus");
+
         todo!()
     }
 

@@ -19,6 +19,7 @@ use crate::voxels::voxels_xdg::xdg::{data as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use tracing::trace;
 use crate::voxels::voxels_xdg::runtime::{RuntimeDirectoryPriority, RuntimeDirectoryResolutionMethods};
 use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 
@@ -110,10 +111,14 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
 impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory<BaseT> {
     #[cfg(feature = "dbus")]
     fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        trace!("Resolving data directory from DBus");
+
         todo!()
     }
 
     fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        trace!("Resolving data directory from DBus");
+
         todo!()
     }
 
