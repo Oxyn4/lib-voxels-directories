@@ -31,14 +31,18 @@ impl From<BaseDirectoryError> for VoxelsDirectoryError {
 }
 pub mod voxels_xdg;
 
+#[allow(dead_code)]
 #[cfg(feature = "application")]
 mod data;
 
+#[allow(dead_code)]
 #[cfg(feature = "application")]
 mod config;
 
+#[allow(dead_code)]
 #[cfg(feature = "application")]
 mod state;
 
+#[allow(dead_code)]
 #[cfg(feature = "application")]
 mod runtime;
