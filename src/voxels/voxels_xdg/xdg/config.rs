@@ -247,7 +247,7 @@ fn test_from_fhs() {
 #[test]
 fn test_resolve() {
     // create mocked interfaces to filesystem and environment variables
-    let mut env = MockEnvInt::new();
+    let mut env = crate::environment_variables::MockEnvInt::new();
     let mut validator = MockConfigVerifier::new();
 
     // first test setup conditions for voxels environment variable
@@ -273,7 +273,7 @@ fn test_resolve() {
 
 #[test]
 fn test_from_xdg() {
-    let mut env= MockEnvInt::new();
+    let mut env= crate::environment_variables::MockEnvInt::new();
     let mut validator = MockConfigVerifier::new();
 
     let xdg_home = PathBuf::from("/home");
@@ -297,7 +297,7 @@ fn test_from_xdg() {
 
 #[test]
 fn test_from_voxels() {
-    let mut env: MockEnvInt = MockEnvInt::new();
+    let mut env = crate::environment_variables::MockEnvInt::new();
     let mut validator: MockConfigVerifier = MockConfigVerifier::new();
 
     let voxels_env_home = PathBuf::from("/voxels");
