@@ -20,7 +20,6 @@ use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
 use tracing::trace;
-use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods::{FromFHS, FromVoxels, FromXDG};
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum ConfigDirectoryResolutionMethods {

@@ -18,8 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 use super::BaseDirectoryError;
 use std::path::{Path, PathBuf};
 use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods::{FromFHS, FromVoxels, FromXDG};
-use super::{FsInt, MockFsInt};
-use super::{EnvInt, MockEnvInt};
+use super::{FsInt};
+use super::{EnvInt};
 
 #[mockall::automock]
 pub trait ConfigVerifier {

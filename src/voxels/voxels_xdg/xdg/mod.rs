@@ -19,8 +19,8 @@ pub mod data;
 pub mod state;
 pub mod runtime;
 
-use crate::environment_variables::{MockEnvInt, EnvInt};
-use crate::filesystem::{MockFsInt, FsInt};
+use crate::environment_variables::EnvInt;
+use crate::filesystem::FsInt;
 
 #[derive(Debug)]
 pub enum BaseDirectoryError {

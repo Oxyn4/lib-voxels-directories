@@ -20,9 +20,6 @@ use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
 use tracing::trace;
-use crate::voxels::voxels_xdg::config::ConfigDirectoryPriority;
-use crate::voxels::voxels_xdg::state::StateDirectoryResolutionMethods;
-use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum RuntimeDirectoryResolutionMethods {
