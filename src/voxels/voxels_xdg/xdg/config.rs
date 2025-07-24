@@ -55,7 +55,7 @@ impl<FsIntT: FsInt> DefaultConfigVerifier<FsIntT> {
 
 #[test]
 fn test_default_config_verifier() {
-    let mut fs = MockFsInt::new();
+    let mut fs = crate::filesystem::MockFsInt::new();
 
     let test_path = Path::new("Home/");
 
@@ -215,7 +215,7 @@ impl<EnvIntT: EnvInt, VerifierT: ConfigVerifier> Into<PathBuf> for ConfigDirecto
 
 #[test]
 fn test_from_fhs() {
-    let mut env = MockEnvInt::new();
+    let mut env = crate::environment_variables::MockEnvInt::new();
     let mut validator = MockConfigVerifier::new();
 
     let home_env = PathBuf::from("/home");
