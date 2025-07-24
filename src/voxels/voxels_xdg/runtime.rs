@@ -21,6 +21,7 @@ use super::{VoxelsDirectoryError};
 use std::path::{PathBuf};
 use tracing::trace;
 use crate::voxels::voxels_xdg::config::ConfigDirectoryPriority;
+use crate::voxels::voxels_xdg::state::StateDirectoryResolutionMethods;
 use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -31,7 +32,7 @@ pub enum RuntimeDirectoryResolutionMethods {
 }
 
 pub struct RuntimeDirectoryPriority {
-    order: std::collections::BTreeMap<usize, RuntimeDirectoryResolutionMethods>,
+    pub(crate) order: std::collections::BTreeMap<usize, RuntimeDirectoryResolutionMethods>,
 }
 
 impl Default for RuntimeDirectoryPriority {
@@ -119,15 +120,31 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
         todo!()
     }
 
+    #[cfg(feature = "dbus")]
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
-        // if resolve has been called previously we update this objects path
-        if self.is_resolved() {
-            return Ok(self.data_path.clone().unwrap());
+        for index in 0..self.priority.order.len() {
+            return match self.priority.order[&index] {
+                RuntimeDirectoryResolutionMethods::FromDBus => {
+                    self.resolve_using_dbus()
+                },
+                RuntimeDirectoryResolutionMethods::FromXDG => {
+                    self.resolve_using_xdg()
+                }
+            }
         }
+        Err(VoxelsDirectoryError::NoCandidate)
+    }
 
-        let (base, _how) = self.base.resolve()?;
-
-        Ok(base.join("voxels"))
+    #[cfg(not(feature = "dbus"))]
+    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        for index in 0..self.priority.order.len() {
+            return match self.priority.order[&index] {
+                RuntimeDirectoryResolutionMethods::FromXDG => {
+                    self.resolve_using_xdg()
+                }
+            }
+        }
+        Err(VoxelsDirectoryError::NoCandidate)
     }
 
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {

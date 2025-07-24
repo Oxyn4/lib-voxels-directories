@@ -93,13 +93,13 @@ pub trait DataDirectoryResolver {
 
 pub struct DataDirectory<BaseT: base::DataDirectoryResolver> {
     data_path: Option<PathBuf>,
-    pub priority: RuntimeDirectoryPriority,
+    pub priority: DataDirectoryPriority,
     base: BaseT,
 }
 
 impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
     pub fn new(base: BaseT) -> Self {
-        let priority = RuntimeDirectoryPriority::default();
+        let priority = DataDirectoryPriority::default();
         Self {
             data_path: None,
             priority,
@@ -122,15 +122,31 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
         todo!()
     }
 
+    #[cfg(feature = "dbus")]
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
-        // if resolve has been called previously we update this objects path
-        if self.is_resolved() {
-            return Ok(self.data_path.clone().unwrap());
+        for index in 0..self.priority.order.len() {
+            return match self.priority.order[&index] {
+                DataDirectoryResolutionMethods::FromDBus => {
+                    self.resolve_using_dbus()
+                },
+                DataDirectoryResolutionMethods::FromXDG => {
+                    self.resolve_using_xdg()
+                }
+            }
         }
+        Err(VoxelsDirectoryError::NoCandidate)
+    }
 
-        let (base, _how) = self.base.resolve()?;
-
-        Ok(base.join("voxels"))
+    #[cfg(not(feature = "dbus"))]
+    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        for index in 0..self.priority.order.len() {
+            return match self.priority.order[&index] {
+                DataDirectoryResolutionMethods::FromXDG => {
+                    self.resolve_using_xdg()
+                }
+            }
+        }
+        Err(VoxelsDirectoryError::NoCandidate)
     }
 
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {

@@ -124,7 +124,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
 
         let (base, _how) = self.base.resolve()?;
 
-        return Ok(base.join("voxels"));
+        Ok(base.join("voxels"))
     }
 
     #[cfg(feature = "dbus")]

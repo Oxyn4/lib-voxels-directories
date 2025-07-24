@@ -89,7 +89,7 @@ pub trait StateDirectoryResolver {
 
 pub struct StateDirectory<BaseT: base::StateDirectoryResolver> {
     path: Option<PathBuf>,
-    pub priority: RuntimeDirectoryPriority,
+    pub priority: StateDirectoryPriority,
     base: BaseT,
 }
 
@@ -114,10 +114,6 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirect
     fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving state directory from DBus");
 
-        todo!()
-    }
-
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         // if resolve has been called previously we update this objects path
         if self.is_resolved() {
             return Ok(self.path.clone().unwrap());
@@ -126,6 +122,33 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirect
         let (base, _how) = self.base.resolve()?;
 
         Ok(base.join("voxels"))
+    }
+
+    #[cfg(feature = "dbus")]
+    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        for index in 0..self.priority.order.len() {
+            return match self.priority.order[&index] {
+                StateDirectoryResolutionMethods::FromDBus => {
+                    self.resolve_using_dbus()
+                },
+                StateDirectoryResolutionMethods::FromXDG => {
+                    self.resolve_using_xdg()
+                }
+            }
+        }
+        Err(VoxelsDirectoryError::NoCandidate)
+    }
+
+    #[cfg(not(feature = "dbus"))]
+    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        for index in 0..self.priority.order.len() {
+            return match self.priority.order[&index] {
+                StateDirectoryResolutionMethods::FromXDG => {
+                    self.resolve_using_xdg()
+                }
+            }
+        }
+        Err(VoxelsDirectoryError::NoCandidate)
     }
 
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
