@@ -52,7 +52,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
             return Ok(self.data_path.clone().unwrap());
         }
 
-        let base = self.base.resolve()?;
+        let base = self.base.resolve().await?;
 
         Ok(base.join(application.rdn().as_path()))
     }

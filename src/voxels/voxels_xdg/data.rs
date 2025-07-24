@@ -20,8 +20,6 @@ use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
 use tracing::trace;
-use crate::voxels::voxels_xdg::runtime::{RuntimeDirectoryPriority, RuntimeDirectoryResolutionMethods};
-use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum DataDirectoryResolutionMethods {
@@ -81,11 +79,20 @@ impl DataDirectoryPriority {
 #[mockall::automock]
 pub trait DataDirectoryResolver {
     #[cfg(feature = "dbus")]
-    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    #[cfg(not(feature = "dbus"))]
+    fn  resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(not(feature = "dbus"))]
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn is_resolved(&self) -> bool;
@@ -110,7 +117,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
 
 impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory<BaseT> {
     #[cfg(feature = "dbus")]
-    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving data directory from DBus");
 
         todo!()
@@ -130,11 +137,11 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
     }
 
     #[cfg(feature = "dbus")]
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 DataDirectoryResolutionMethods::FromDBus => {
-                    self.resolve_using_dbus()
+                    self.resolve_using_dbus().await
                 },
                 DataDirectoryResolutionMethods::FromXDG => {
                     self.resolve_using_xdg()
@@ -156,6 +163,16 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
         Err(VoxelsDirectoryError::NoCandidate)
     }
 
+    #[cfg(feature = "dbus")]
+    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        let resolved = self.resolve().await?;
+
+        std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");
+
+        Ok(resolved)
+    }
+
+    #[cfg(not(feature = "dbus"))]
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve()?;
 

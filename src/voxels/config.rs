@@ -53,7 +53,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
             return Ok(self.data_path.clone().unwrap());
         }
 
-        let base = self.base.resolve()?;
+        let base = self.base.resolve().await?;
 
         Ok(base.join(application.rdn().as_path()))
     }

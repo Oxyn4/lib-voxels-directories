@@ -79,12 +79,20 @@ impl RuntimeDirectoryPriority {
 #[mockall::automock]
 pub trait RuntimeDirectoryResolver {
     #[cfg(feature = "dbus")]
-    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
+    #[cfg(not(feature = "dbus"))]
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
+    #[cfg(feature = "dbus")]
+    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(not(feature = "dbus"))]
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn is_resolved(&self) -> bool;
@@ -109,7 +117,7 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectory<BaseT> {
 
 impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for RuntimeDirectory<BaseT> {
     #[cfg(feature = "dbus")]
-    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving runtime directory from DBus");
 
         todo!()
@@ -129,11 +137,11 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
     }
 
     #[cfg(feature = "dbus")]
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 RuntimeDirectoryResolutionMethods::FromDBus => {
-                    self.resolve_using_dbus()
+                    self.resolve_using_dbus().await
                 },
                 RuntimeDirectoryResolutionMethods::FromXDG => {
                     self.resolve_using_xdg()
@@ -155,6 +163,17 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
         Err(VoxelsDirectoryError::NoCandidate)
     }
 
+    #[cfg(feature = "dbus")]
+    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        let resolved = self.resolve().await?;
+
+        std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");
+
+        Ok(resolved)
+
+    }
+
+    #[cfg(not(feature = "dbus"))]
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve()?;
 
