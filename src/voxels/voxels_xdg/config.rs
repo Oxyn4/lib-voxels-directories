@@ -76,6 +76,8 @@ impl ConfigDirectoryPriority {
 pub trait ConfigDirectoryResolver {
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
+    fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
     fn is_resolved(&self) -> bool;
 }
 
@@ -106,6 +108,14 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
         let (base, _how) = self.base.resolve()?;
 
         Ok(base.join("voxels"))
+    }
+
+    fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        let resolved = self.resolve()?;
+
+        std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");
+
+        Ok(resolved)
     }
 
     fn is_resolved(&self) -> bool {

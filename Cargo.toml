@@ -12,13 +12,14 @@ homepage = "oxynlabs.dev"
 dbus = { version = "0.9.7", optional = true }
 dbus-tokio = { version = "0.7.6", optional = true }
 tokio = { version = "1.46.1", features = ["full"], optional = true }
+tokio-util = { version = "0.7.15", optional = true }
 # integration with voxel application framework
-lib-voxels-application = {git="https://github.com/Oxyn4/lib-voxels-application", optional = true}
+lib-voxels-application = {git="https://github.com/Oxyn4/lib-voxels-application", optional = true, features = ["dbus"]}
 mockall = "0.13.1"
 
 [features]
 # add dbus functions to get voxels_xdg from directories dbus service
-dbus = ["dep:dbus", "dep:dbus-tokio", "dep:tokio"]
+dbus = ["dep:dbus", "dep:dbus-tokio", "dep:tokio", "dep:tokio-util"]
 application = ["dbus", "dep:lib-voxels-application"]
 # all features
 all = ["application", "dbus"]
