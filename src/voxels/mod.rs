@@ -29,3 +29,15 @@ impl From<BaseDirectoryError> for VoxelsDirectoryError {
     }
 }
 pub mod voxels_xdg;
+
+#[cfg(feature = "application")]
+mod data;
+
+#[cfg(feature = "application")]
+mod config;
+
+#[cfg(feature = "application")]
+mod state;
+
+#[cfg(feature = "application")]
+mod runtime;

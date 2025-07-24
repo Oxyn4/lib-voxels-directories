@@ -72,7 +72,6 @@ impl Default for RuntimeDirectoryPriority {
     fn default() -> Self {
         let mut order = std::collections::BTreeMap::new();
         order.insert(0, RuntimeDirectoryResolutionMethods::FromVoxels);
-        order.insert(1, RuntimeDirectoryResolutionMethods::FromXDG);
         Self {
             order
         }

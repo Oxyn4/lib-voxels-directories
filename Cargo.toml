@@ -8,5 +8,17 @@ readme = "../README.md"
 homepage = "oxynlabs.dev"
 
 [dependencies]
-lib-voxels-application = {git="https://github.com/Oxyn4/lib-voxels-application"}
+# asyncronous dbus related options
+dbus = { version = "0.9.7", optional = true }
+dbus-tokio = { version = "0.7.6", optional = true }
+tokio = { version = "1.46.1", features = ["full"], optional = true }
+# integration with voxel application framework
+lib-voxels-application = {git="https://github.com/Oxyn4/lib-voxels-application", optional = true}
 mockall = "0.13.1"
+
+[features]
+# add dbus functions to get voxels_xdg from directories dbus service
+dbus = ["dep:dbus", "dep:dbus-tokio", "dep:tokio"]
+application = ["dbus", "dep:lib-voxels-application"]
+# all features
+all = ["application", "dbus"]

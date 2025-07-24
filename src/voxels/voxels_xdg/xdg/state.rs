@@ -65,7 +65,7 @@ pub enum StateDirectoryResolutionMethods {
     FromVoxels
 }
 
-struct StateDirectoryPriority {
+pub struct StateDirectoryPriority {
     order: std::collections::BTreeMap<usize, StateDirectoryResolutionMethods>,
 }
 

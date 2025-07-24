@@ -18,4 +18,5 @@ pub mod voxels;
 pub mod environment_variables;
 pub mod filesystem;
 
+#[cfg(feature = "application")]
 pub use lib_voxels_application;

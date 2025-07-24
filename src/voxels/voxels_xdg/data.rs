@@ -25,6 +25,7 @@ use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods;
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum DataDirectoryResolutionMethods {
     FromXDG,
+    #[cfg(feature = "dbus")]
     FromDBus,
 }
 
@@ -33,10 +34,24 @@ pub struct DataDirectoryPriority {
 }
 
 impl Default for DataDirectoryPriority {
+    #[cfg(not(feature = "dbus"))]
     fn default() -> Self {
         let mut order = std::collections::BTreeMap::new();
+
+        order.insert(0, DataDirectoryResolutionMethods::FromXDG);
+
+        Self {
+            order
+        }
+    }
+
+    #[cfg(feature = "dbus")]
+    fn default() -> Self {
+        let mut order = std::collections::BTreeMap::new();
+
         order.insert(0, DataDirectoryResolutionMethods::FromDBus);
         order.insert(1, DataDirectoryResolutionMethods::FromXDG);
+
         Self {
             order
         }
@@ -44,10 +59,17 @@ impl Default for DataDirectoryPriority {
 }
 
 impl DataDirectoryPriority {
+    #[cfg(feature = "dbus")]
     pub fn set_all(&mut self, new_order: [DataDirectoryResolutionMethods; 2]) {
         self.order = std::collections::BTreeMap::new();
         self.order.insert(0, new_order[0].clone());
         self.order.insert(1, new_order[1].clone());
+    }
+
+    #[cfg(not(feature = "dbus"))]
+    pub fn set_all(&mut self, new_order: [DataDirectoryResolutionMethods; 1]) {
+        self.order = std::collections::BTreeMap::new();
+        self.order.insert(0, new_order[0].clone());
     }
 
     pub fn get(&self) -> std::collections::BTreeMap<usize, DataDirectoryResolutionMethods> {
