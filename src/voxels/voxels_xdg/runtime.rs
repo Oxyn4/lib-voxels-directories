@@ -105,6 +105,7 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectory<BaseT> {
 }
 
 impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for RuntimeDirectory<BaseT> {
+    #[cfg(feature = "dbus")]
     fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         todo!()
     }

@@ -108,6 +108,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
 }
 
 impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory<BaseT> {
+    #[cfg(feature = "dbus")]
     fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         todo!()
     }

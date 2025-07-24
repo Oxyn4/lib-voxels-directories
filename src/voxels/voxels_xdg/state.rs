@@ -103,6 +103,7 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectory<BaseT> {
 }
 
 impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirectory<BaseT> {
+    #[cfg(feature = "dbus")]
     fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         todo!()
     }
