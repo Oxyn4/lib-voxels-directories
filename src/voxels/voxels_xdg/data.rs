@@ -79,6 +79,11 @@ impl DataDirectoryPriority {
 
 #[mockall::automock]
 pub trait DataDirectoryResolver {
+    #[cfg(feature = "dbus")]
+    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
@@ -103,6 +108,14 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
 }
 
 impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory<BaseT> {
+    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        todo!()
+    }
+
+    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        todo!()
+    }
+
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         // if resolve has been called previously we update this objects path
         if self.is_resolved() {

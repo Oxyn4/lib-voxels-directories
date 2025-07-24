@@ -76,6 +76,10 @@ impl StateDirectoryPriority {
 
 #[mockall::automock]
 pub trait StateDirectoryResolver {
+    #[cfg(feature = "dbus")]
+    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
@@ -99,6 +103,14 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectory<BaseT> {
 }
 
 impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirectory<BaseT> {
+    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        todo!()
+    }
+
+    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        todo!()
+    }
+
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
         // if resolve has been called previously we update this objects path
         if self.is_resolved() {

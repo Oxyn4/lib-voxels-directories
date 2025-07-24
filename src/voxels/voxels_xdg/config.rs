@@ -19,6 +19,7 @@ use crate::voxels::voxels_xdg::xdg::{config as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use tracing::trace;
 use crate::voxels::voxels_xdg::xdg::config::ConfigDirectoryResolutionMethods::{FromFHS, FromVoxels, FromXDG};
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -74,6 +75,12 @@ impl ConfigDirectoryPriority {
 
 #[mockall::automock]
 pub trait ConfigDirectoryResolver {
+
+    #[cfg(feature = "dbus")]
+    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+
     fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
@@ -90,6 +97,7 @@ pub struct ConfigDirectory<BaseT: base::ConfigDirectoryResolver> {
 impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectory<BaseT> {
     pub fn new(base: BaseT) -> Self {
         let priority = ConfigDirectoryPriority::default();
+
         Self {
             config_path: None,
             priority,
@@ -99,7 +107,16 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectory<BaseT> {
 }
 
 impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDirectory<BaseT> {
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    #[cfg(feature = "dbus")]
+    fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        trace!("Resolving config directory from DBus");
+
+        todo!()
+    }
+
+    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        trace!("Resolving config directory from XDG");
+
         // if resolve has been called previously we update this objects path
         if self.is_resolved() {
             return Ok(self.config_path.clone().unwrap());
@@ -107,7 +124,34 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
 
         let (base, _how) = self.base.resolve()?;
 
-        Ok(base.join("voxels"))
+        return Ok(base.join("voxels"));
+    }
+
+    #[cfg(feature = "dbus")]
+    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        for index in 0..self.priority.order.len() {
+            return match self.priority.order[&index] {
+                ConfigDirectoryResolutionMethods::FromDBus => {
+                    self.resolve_using_dbus()
+                },
+                ConfigDirectoryResolutionMethods::FromXDG => {
+                    self.resolve_using_xdg()
+                }
+            }
+        }
+        Err(VoxelsDirectoryError::NoCandidate)
+    }
+
+    #[cfg(not(feature = "dbus"))]
+    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+        for index in 0..self.priority.order.len() {
+            return match self.priority.order[&index] {
+                ConfigDirectoryResolutionMethods::FromXDG => {
+                    self.resolve_using_xdg()
+                }
+            }
+        }
+        Err(VoxelsDirectoryError::NoCandidate)
     }
 
     fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {

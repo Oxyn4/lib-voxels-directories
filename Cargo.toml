@@ -16,6 +16,7 @@ tokio-util = { version = "0.7.15", optional = true }
 # integration with voxel application framework
 lib-voxels-application = {git="https://github.com/Oxyn4/lib-voxels-application", optional = true, features = ["dbus"]}
 mockall = "0.13.1"
+tracing = "0.1.41"
 
 [features]
 # add dbus functions to get voxels_xdg from directories dbus service
