@@ -22,6 +22,9 @@ use super::VoxelsDirectoryError;
 
 use super::voxels_xdg::runtime as base;
 
+#[cfg(feature = "dbus")]
+pub const DBUS_STANDARD_APPS_RUNTIME_METHOD_NAME: &str = "runtime";
+
 #[mockall::automock]
 pub trait RuntimeDirectoryResolver {
     async fn resolve(&self, application: Application) -> Result<PathBuf, VoxelsDirectoryError>;

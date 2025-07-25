@@ -22,6 +22,9 @@ use super::voxels_xdg::data as base;
 
 use lib_voxels_application::application::application::Application;
 
+#[cfg(feature = "dbus")]
+pub const DBUS_STANDARD_APPS_DATA_METHOD_NAME: &str = "data";
+
 #[mockall::automock]
 pub trait DataDirectoryResolver {
     async fn resolve(&self, application: Application) -> Result<PathBuf, VoxelsDirectoryError>;

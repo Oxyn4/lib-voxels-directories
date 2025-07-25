@@ -22,6 +22,9 @@ use super::VoxelsDirectoryError;
 
 use super::voxels_xdg::state as base;
 
+#[cfg(feature = "dbus")]
+pub const DBUS_STANDARD_APPS_STATE_METHOD_NAME: &str = "state";
+
 #[mockall::automock]
 pub trait StateDirectoryResolver {
     async fn resolve(&self, application: Application) -> Result<PathBuf, VoxelsDirectoryError>;
