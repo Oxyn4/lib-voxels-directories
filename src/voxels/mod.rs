@@ -17,6 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use voxels_xdg::xdg::BaseDirectoryError;
 
+#[cfg(feature = "dbus")]
+pub const DBUS_STANDARD_APPS_PATH: &str = "/apps";
+
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum VoxelsDirectoryError {
     NoCandidate

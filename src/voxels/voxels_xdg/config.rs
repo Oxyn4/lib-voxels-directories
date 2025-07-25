@@ -21,6 +21,14 @@ use super::{VoxelsDirectoryError};
 use std::path::{PathBuf};
 use tracing::trace;
 
+use std::future::Future;
+use std::time::Duration;
+use dbus_tokio::connection::IOResourceError;
+use tokio_util::sync::CancellationToken;
+
+#[cfg(feature = "dbus")]
+pub const DBUS_STANDARD_VOXELS_XDG_CONFIG_METHOD_NAME: &str = "config";
+
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum ConfigDirectoryResolutionMethods {
     FromXDG,
@@ -76,21 +84,21 @@ impl ConfigDirectoryPriority {
 pub trait ConfigDirectoryResolver {
 
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_using_dbus<F: FnOnce(IOResourceError) + Send + 'static>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>;
 
-    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
-
-    #[cfg(feature = "dbus")]
-    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
-
-    #[cfg(not(feature = "dbus"))]
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     #[cfg(feature = "dbus")]
-    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     #[cfg(not(feature = "dbus"))]
-    fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(not(feature = "dbus"))]
+    fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn is_resolved(&self) -> bool;
 }
@@ -114,14 +122,50 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectory<BaseT> {
 }
 
 impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDirectory<BaseT> {
-    #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_using_dbus<F>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>
+    where
+        F: FnOnce(IOResourceError) + Send + 'static
+    {
         trace!("Resolving config directory from DBus");
 
-        todo!()
+        // if resolve has been called previously we update this objects path
+        if self.is_resolved() {
+            return Ok(self.path.clone().unwrap());
+        }
+
+        let (res, con) =
+            dbus_tokio
+            ::connection
+            ::new_session_sync()
+            .unwrap();
+
+        let cancellation_token = CancellationToken::new();
+
+        let child_token = cancellation_token.child_token();
+
+        let _ = tokio::task::spawn(async move {
+            tokio::select! {
+                err = res => {
+                    on_connection_loss(err);
+                },
+                _ = child_token.cancelled() => {
+                    return;
+                }
+            }
+        });
+
+        let proxy = dbus::nonblock::Proxy::new(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, super::DBUS_STANDARD_VOXELS_XDG_PATH, Duration::from_secs(1), con);
+
+        let (config,): (String,) = proxy.method_call(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_CONFIG_METHOD_NAME,()).await.unwrap();
+
+        let config_path = PathBuf::from(config);
+
+        self.path = Some(config_path.clone());
+
+        Ok(config_path)
     }
 
-    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving config directory from XDG");
 
         // if resolve has been called previously we update this objects path
@@ -131,15 +175,19 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
 
         let (base, _how) = self.base.resolve()?;
 
-        Ok(base.join("voxels"))
+        let config_path = base.join("voxels");
+
+        self.path = Some(config_path.clone());
+
+        Ok(config_path)
     }
 
     #[cfg(feature = "dbus")]
-    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 ConfigDirectoryResolutionMethods::FromDBus => {
-                    self.resolve_using_dbus().await
+                    self.resolve_using_dbus(|_| {}).await
                 },
                 ConfigDirectoryResolutionMethods::FromXDG => {
                     self.resolve_using_xdg()
@@ -150,7 +198,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
     }
 
     #[cfg(not(feature = "dbus"))]
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 ConfigDirectoryResolutionMethods::FromXDG => {
@@ -162,7 +210,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
     }
 
     #[cfg(feature = "dbus")]
-    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve().await?;
 
         std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");
@@ -171,7 +219,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
     }
 
     #[cfg(not(feature = "dbus"))]
-    fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve()?;
 
         std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");

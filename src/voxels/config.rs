@@ -25,9 +25,9 @@ use super::voxels_xdg::config as base;
 
 #[mockall::automock]
 pub trait ConfigDirectoryResolver {
-    async fn resolve(&self, application: Application) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve(&mut self, application: Application) -> Result<PathBuf, VoxelsDirectoryError>;
 
-    async fn resolve_and_create(&self, application: Application) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_and_create(&mut self, application: Application) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn is_resolved(&self) -> bool;
 }
@@ -47,7 +47,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectory<BaseT> {
 }
 
 impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDirectory<BaseT> {
-    async fn resolve(&self, application: Application) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve(&mut self, application: Application) -> Result<PathBuf, VoxelsDirectoryError> {
         // if resolve has been called previously we update this objects path
         if self.is_resolved() {
             return Ok(self.data_path.clone().unwrap());
@@ -58,7 +58,7 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
         Ok(base.join(application.rdn().as_path()))
     }
 
-    async fn resolve_and_create(&self, application: Application) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_and_create(&mut self, application: Application) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve(application).await?;
 
         std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");
