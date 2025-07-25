@@ -79,21 +79,21 @@ impl RuntimeDirectoryPriority {
 #[mockall::automock]
 pub trait RuntimeDirectoryResolver {
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_using_dbus(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
-    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
-
-    #[cfg(not(feature = "dbus"))]
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
-
-    #[cfg(feature = "dbus")]
-    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
-
-    #[cfg(feature = "dbus")]
-    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     #[cfg(not(feature = "dbus"))]
-    fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(not(feature = "dbus"))]
+    fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn is_resolved(&self) -> bool;
 }
@@ -117,13 +117,13 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectory<BaseT> {
 
 impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for RuntimeDirectory<BaseT> {
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_using_dbus(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving runtime directory from DBus");
 
         todo!()
     }
 
-    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving runtime directory from DBus");
 
         // if resolve has been called previously we update this objects path
@@ -133,11 +133,15 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
 
         let (base, _how) = self.base.resolve()?;
 
-        Ok(base.join("voxels"))
+        let config_path = base.join("voxels");
+
+        self.path = Some(config_path.clone());
+
+        Ok(config_path)
     }
 
     #[cfg(feature = "dbus")]
-    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 RuntimeDirectoryResolutionMethods::FromDBus => {
@@ -152,7 +156,7 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
     }
 
     #[cfg(not(feature = "dbus"))]
-    fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 RuntimeDirectoryResolutionMethods::FromXDG => {
@@ -164,7 +168,7 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
     }
 
     #[cfg(feature = "dbus")]
-    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve().await?;
 
         std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");
@@ -174,7 +178,7 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
     }
 
     #[cfg(not(feature = "dbus"))]
-    fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve()?;
 
         std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");

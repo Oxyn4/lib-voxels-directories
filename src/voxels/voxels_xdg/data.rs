@@ -19,7 +19,11 @@ use crate::voxels::voxels_xdg::xdg::{data as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use std::time::Duration;
+use dbus_tokio::connection::IOResourceError;
+use tokio_util::sync::CancellationToken;
 use tracing::trace;
+use crate::voxels::voxels_xdg::config::DBUS_STANDARD_VOXELS_XDG_CONFIG_METHOD_NAME;
 
 #[cfg(feature = "dbus")]
 pub const DBUS_STANDARD_VOXELS_XDG_DATA_METHOD_NAME: &str = "data";
@@ -82,21 +86,21 @@ impl DataDirectoryPriority {
 #[mockall::automock]
 pub trait DataDirectoryResolver {
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_using_dbus<F: FnOnce(IOResourceError) + Send + 'static>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>;
 
-    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError>;
-
-    #[cfg(not(feature = "dbus"))]
-    fn  resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
-
-    #[cfg(feature = "dbus")]
-    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError>;
-
-    #[cfg(feature = "dbus")]
-    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     #[cfg(not(feature = "dbus"))]
-    fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError>;
+    fn  resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(not(feature = "dbus"))]
+    fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn is_resolved(&self) -> bool;
 }
@@ -120,13 +124,50 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
 
 impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory<BaseT> {
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_using_dbus<F>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>
+    where
+        F: FnOnce(IOResourceError) + Send + 'static
+    {
         trace!("Resolving data directory from DBus");
 
-        todo!()
+        // if resolve has been called previously we update this objects path
+        if self.is_resolved() {
+            return Ok(self.path.clone().unwrap());
+        }
+
+        let (res, con) =
+            dbus_tokio
+            ::connection
+            ::new_session_sync()
+                .unwrap();
+
+        let cancellation_token = CancellationToken::new();
+
+        let child_token = cancellation_token.child_token();
+
+        let _ = tokio::task::spawn(async move {
+            tokio::select! {
+                err = res => {
+                    on_connection_loss(err);
+                },
+                _ = child_token.cancelled() => {
+                    return;
+                }
+            }
+        });
+
+        let proxy = dbus::nonblock::Proxy::new(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, super::DBUS_STANDARD_VOXELS_XDG_PATH, Duration::from_secs(1), con);
+
+        let (config,): (String,) = proxy.method_call(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_DATA_METHOD_NAME,()).await.unwrap();
+
+        let path = PathBuf::from(config);
+
+        self.path = Some(path.clone());
+
+        Ok(path)
     }
 
-    fn resolve_using_xdg(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving data directory from DBus");
 
         // if resolve has been called previously we update this objects path
@@ -136,15 +177,19 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
 
         let (base, _how) = self.base.resolve()?;
 
-        Ok(base.join("voxels"))
+        let config_path = base.join("voxels");
+
+        self.path = Some(config_path.clone());
+
+        Ok(config_path)
     }
 
     #[cfg(feature = "dbus")]
-    async fn resolve(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 DataDirectoryResolutionMethods::FromDBus => {
-                    self.resolve_using_dbus().await
+                    self.resolve_using_dbus(|_| {}).await
                 },
                 DataDirectoryResolutionMethods::FromXDG => {
                     self.resolve_using_xdg()
@@ -167,7 +212,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
     }
 
     #[cfg(feature = "dbus")]
-    async fn resolve_and_create(&self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve().await?;
 
         std::fs::create_dir_all(resolved.as_path()).expect("Failed to create directory");
