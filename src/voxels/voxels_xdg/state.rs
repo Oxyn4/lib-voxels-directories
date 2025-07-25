@@ -19,6 +19,7 @@ use crate::voxels::voxels_xdg::xdg::{state as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use dbus_tokio::connection::IOResourceError;
 use tracing::trace;
 
 #[cfg(feature = "dbus")]
@@ -79,7 +80,7 @@ impl StateDirectoryPriority {
 #[mockall::automock]
 pub trait StateDirectoryResolver {
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_using_dbus<F: FnOnce(IOResourceError) + Send + 'static>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
     #[cfg(feature = "dbus")]
@@ -115,7 +116,10 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectory<BaseT> {
 
 impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirectory<BaseT> {
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_using_dbus<F>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>
+    where
+        F: FnOnce(IOResourceError) + Send + 'static
+    {
         trace!("Resolving state directory from DBus");
 
         todo!()
@@ -143,7 +147,7 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirect
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 StateDirectoryResolutionMethods::FromDBus => {
-                    self.resolve_using_dbus().await
+                    self.resolve_using_dbus(|_| {}).await
                 },
                 StateDirectoryResolutionMethods::FromXDG => {
                     self.resolve_using_xdg()

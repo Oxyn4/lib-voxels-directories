@@ -19,6 +19,7 @@ use crate::voxels::voxels_xdg::xdg::{runtime as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use dbus_tokio::connection::IOResourceError;
 use tracing::trace;
 
 #[cfg(feature = "dbus")]
@@ -79,7 +80,7 @@ impl RuntimeDirectoryPriority {
 #[mockall::automock]
 pub trait RuntimeDirectoryResolver {
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_using_dbus<F: FnOnce(IOResourceError) + Send + 'static>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
@@ -117,7 +118,10 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectory<BaseT> {
 
 impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for RuntimeDirectory<BaseT> {
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
+    async fn resolve_using_dbus<F>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>
+    where
+        F: FnOnce(IOResourceError) + Send + 'static
+    {
         trace!("Resolving runtime directory from DBus");
 
         todo!()
@@ -145,7 +149,7 @@ impl<BaseT: base::RuntimeDirectoryResolver> RuntimeDirectoryResolver for Runtime
         for index in 0..self.priority.order.len() {
             return match self.priority.order[&index] {
                 RuntimeDirectoryResolutionMethods::FromDBus => {
-                    self.resolve_using_dbus().await
+                    self.resolve_using_dbus(|_| {}).await
                 },
                 RuntimeDirectoryResolutionMethods::FromXDG => {
                     self.resolve_using_xdg()
