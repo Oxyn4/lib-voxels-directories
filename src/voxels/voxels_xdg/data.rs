@@ -21,7 +21,7 @@ use super::{VoxelsDirectoryError};
 use std::path::{PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
-use dbus::blocking::SyncConnection;
+use dbus::nonblock::SyncConnection;
 use dbus_tokio::connection::IOResourceError;
 use tokio_util::sync::CancellationToken;
 use tracing::trace;
@@ -90,7 +90,7 @@ pub trait DataDirectoryResolver {
     async fn resolve_using_dbus<F: FnOnce(IOResourceError) + Send + 'static>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>;
 
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus_with_connection(connection: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError>;
+    async fn resolve_using_dbus_with_connection(&mut self, connection: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
@@ -174,8 +174,16 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
     }
 
     #[cfg(feature = "dbus")]
-    async fn resolve_using_dbus_with_connection(connection: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError> {
-        todo!()
+    async fn resolve_using_dbus_with_connection(&mut self, con: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError> {
+        let proxy = dbus::nonblock::Proxy::new(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, super::DBUS_STANDARD_VOXELS_XDG_PATH, Duration::from_secs(1), con);
+
+        let (config,): (String,) = proxy.method_call(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_DATA_METHOD_NAME,()).await.unwrap();
+
+        let path = PathBuf::from(config);
+
+        self.path = Some(path.clone());
+
+        Ok(path)
     }
 
     /// Find the canonical path by following XDG specification
