@@ -21,6 +21,9 @@ use super::{VoxelsDirectoryError};
 use std::path::{PathBuf};
 use tracing::trace;
 
+#[cfg(feature = "dbus")]
+pub const DBUS_STANDARD_VOXELS_XDG_RUNTIME_METHOD_NAME: &str = "runtime";
+
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum RuntimeDirectoryResolutionMethods {
     FromXDG,

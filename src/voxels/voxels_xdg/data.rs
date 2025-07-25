@@ -21,6 +21,9 @@ use super::{VoxelsDirectoryError};
 use std::path::{PathBuf};
 use tracing::trace;
 
+#[cfg(feature = "dbus")]
+pub const DBUS_STANDARD_VOXELS_XDG_DATA_METHOD_NAME: &str = "data";
+
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum DataDirectoryResolutionMethods {
     FromXDG,
