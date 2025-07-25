@@ -23,7 +23,6 @@ use std::time::Duration;
 use dbus_tokio::connection::IOResourceError;
 use tokio_util::sync::CancellationToken;
 use tracing::trace;
-use crate::voxels::voxels_xdg::data::DBUS_STANDARD_VOXELS_XDG_DATA_METHOD_NAME;
 
 #[cfg(feature = "dbus")]
 pub const DBUS_STANDARD_VOXELS_XDG_RUNTIME_METHOD_NAME: &str = "runtime";

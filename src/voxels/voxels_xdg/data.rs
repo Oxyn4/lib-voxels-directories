@@ -23,7 +23,6 @@ use std::time::Duration;
 use dbus_tokio::connection::IOResourceError;
 use tokio_util::sync::CancellationToken;
 use tracing::trace;
-use crate::voxels::voxels_xdg::config::DBUS_STANDARD_VOXELS_XDG_CONFIG_METHOD_NAME;
 
 #[cfg(feature = "dbus")]
 pub const DBUS_STANDARD_VOXELS_XDG_DATA_METHOD_NAME: &str = "data";
@@ -123,6 +122,8 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectory<BaseT> {
 }
 
 impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory<BaseT> {
+
+    /// Find the canonical path by contacting the directories service on the system
     #[cfg(feature = "dbus")]
     async fn resolve_using_dbus<F>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>
     where
@@ -167,6 +168,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
         Ok(path)
     }
 
+    /// Find the canonical path by following XDG specification
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         trace!("Resolving data directory from DBus");
 
@@ -184,6 +186,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
         Ok(config_path)
     }
 
+    /// Utilise the priority ordering given during construction to try each method until one returns valid result
     #[cfg(feature = "dbus")]
     async fn resolve(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         for index in 0..self.priority.order.len() {
@@ -211,6 +214,7 @@ impl<BaseT: base::DataDirectoryResolver> DataDirectoryResolver for DataDirectory
         Err(VoxelsDirectoryError::NoCandidate)
     }
 
+    /// Same as resolve except the path and parents are created if they do not already exist
     #[cfg(feature = "dbus")]
     async fn resolve_and_create(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
         let resolved = self.resolve().await?;

@@ -36,16 +36,16 @@ pub mod voxels_xdg;
 
 #[allow(dead_code)]
 #[cfg(feature = "application")]
-mod data;
+pub mod data;
 
 #[allow(dead_code)]
 #[cfg(feature = "application")]
-mod config;
+pub mod config;
 
 #[allow(dead_code)]
 #[cfg(feature = "application")]
-mod state;
+pub mod state;
 
 #[allow(dead_code)]
 #[cfg(feature = "application")]
-mod runtime;
+pub mod runtime;
