@@ -19,7 +19,9 @@ use crate::voxels::voxels_xdg::xdg::{state as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
+use dbus::blocking::SyncConnection;
 use dbus_tokio::connection::IOResourceError;
 use tokio_util::sync::CancellationToken;
 use tracing::trace;
@@ -84,6 +86,9 @@ impl StateDirectoryPriority {
 pub trait StateDirectoryResolver {
     #[cfg(feature = "dbus")]
     async fn resolve_using_dbus<F: FnOnce(IOResourceError) + Send + 'static>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>;
+
+    #[cfg(feature = "dbus")]
+    async fn resolve_using_dbus_with_connection(connection: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError>;
 
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
     #[cfg(feature = "dbus")]
@@ -160,6 +165,11 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirect
         self.path = Some(path.clone());
 
         Ok(path)
+    }
+
+    #[cfg(feature = "dbus")]
+    async fn resolve_using_dbus_with_connection(connection: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError> {
+        todo!()
     }
 
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {

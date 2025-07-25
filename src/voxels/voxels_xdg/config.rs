@@ -22,7 +22,9 @@ use std::path::{PathBuf};
 use tracing::trace;
 
 use std::future::Future;
+use std::sync::Arc;
 use std::time::Duration;
+use dbus::blocking::SyncConnection;
 use dbus_tokio::connection::IOResourceError;
 use tokio_util::sync::CancellationToken;
 
@@ -86,6 +88,9 @@ pub trait ConfigDirectoryResolver {
     #[cfg(feature = "dbus")]
     async fn resolve_using_dbus<F: FnOnce(IOResourceError) + Send + 'static>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>;
 
+    #[cfg(feature = "dbus")]
+    async fn resolve_using_dbus_with_connection(connection: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError>;
+
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError>;
 
     #[cfg(feature = "dbus")]
@@ -122,6 +127,8 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectory<BaseT> {
 }
 
 impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDirectory<BaseT> {
+
+    #[cfg(feature = "dbus")]
     async fn resolve_using_dbus<F>(&mut self, on_connection_loss: F) -> Result<PathBuf, VoxelsDirectoryError>
     where
         F: FnOnce(IOResourceError) + Send + 'static
@@ -163,6 +170,11 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
         self.path = Some(config_path.clone());
 
         Ok(config_path)
+    }
+
+    #[cfg(feature = "dbus")]
+    async fn resolve_using_dbus_with_connection(connection: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError> {
+        todo!()
     }
 
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
