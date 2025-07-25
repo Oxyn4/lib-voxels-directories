@@ -19,8 +19,11 @@ use crate::voxels::voxels_xdg::xdg::{state as base};
 use super::{VoxelsDirectoryError};
 
 use std::path::{PathBuf};
+use std::time::Duration;
 use dbus_tokio::connection::IOResourceError;
+use tokio_util::sync::CancellationToken;
 use tracing::trace;
+use crate::voxels::voxels_xdg::data::DBUS_STANDARD_VOXELS_XDG_DATA_METHOD_NAME;
 
 #[cfg(feature = "dbus")]
 pub const DBUS_STANDARD_VOXELS_XDG_STATE_METHOD_NAME: &str = "state";
@@ -122,7 +125,41 @@ impl<BaseT: base::StateDirectoryResolver> StateDirectoryResolver for StateDirect
     {
         trace!("Resolving state directory from DBus");
 
-        todo!()
+        // if resolve has been called previously we update this objects path
+        if self.is_resolved() {
+            return Ok(self.path.clone().unwrap());
+        }
+
+        let (res, con) =
+            dbus_tokio
+            ::connection
+            ::new_session_sync()
+                .unwrap();
+
+        let cancellation_token = CancellationToken::new();
+
+        let child_token = cancellation_token.child_token();
+
+        let _ = tokio::task::spawn(async move {
+            tokio::select! {
+                err = res => {
+                    on_connection_loss(err);
+                },
+                _ = child_token.cancelled() => {
+                    return;
+                }
+            }
+        });
+
+        let proxy = dbus::nonblock::Proxy::new(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, super::DBUS_STANDARD_VOXELS_XDG_PATH, Duration::from_secs(1), con);
+
+        let (config,): (String,) = proxy.method_call(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_STATE_METHOD_NAME,()).await.unwrap();
+
+        let path = PathBuf::from(config);
+
+        self.path = Some(path.clone());
+
+        Ok(path)
     }
 
     fn resolve_using_xdg(&mut self) -> Result<PathBuf, VoxelsDirectoryError> {
