@@ -16,12 +16,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use crate::voxels::voxels_xdg::xdg::{config as base};
 
-use super::{VoxelsDirectoryError};
+use super::{VoxelsDirectoryError, DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_PATH};
 
 use std::path::{PathBuf};
 use tracing::trace;
 
-use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 use dbus::nonblock::SyncConnection;
@@ -161,9 +160,9 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
             }
         });
 
-        let proxy = dbus::nonblock::Proxy::new(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, super::DBUS_STANDARD_VOXELS_XDG_PATH, Duration::from_secs(1), con);
+        let proxy = dbus::nonblock::Proxy::new(DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_PATH, Duration::from_secs(1), con);
 
-        let (config,): (String,) = proxy.method_call(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_CONFIG_METHOD_NAME,()).await.unwrap();
+        let (config,): (String,) = proxy.method_call(DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_CONFIG_METHOD_NAME, ()).await.unwrap();
 
         let config_path = PathBuf::from(config);
 
@@ -174,9 +173,9 @@ impl<BaseT: base::ConfigDirectoryResolver> ConfigDirectoryResolver for ConfigDir
 
     #[cfg(feature = "dbus")]
     async fn resolve_using_dbus_with_connection(&mut self, con: Arc<SyncConnection>) -> Result<PathBuf, VoxelsDirectoryError> {
-        let proxy = dbus::nonblock::Proxy::new(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, super::DBUS_STANDARD_VOXELS_XDG_PATH, Duration::from_secs(1), con);
+        let proxy = dbus::nonblock::Proxy::new(DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_PATH, Duration::from_secs(1), con);
 
-        let (config,): (String,) = proxy.method_call(super::DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_CONFIG_METHOD_NAME,()).await.unwrap();
+        let (config,): (String,) = proxy.method_call(DBUS_STANDARD_DIRECTORIES_SERVICE_INTERFACE, DBUS_STANDARD_VOXELS_XDG_CONFIG_METHOD_NAME, ()).await.unwrap();
 
         let config_path = PathBuf::from(config);
 
